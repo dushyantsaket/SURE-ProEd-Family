@@ -1,17 +1,224 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> inline.html
-    </title>
+import React, { useState, useMemo } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ShoppingCart, Heart, Share2, Star, ShieldCheck, Wrench, ChevronRight, Package, ArrowLeft, Filter } from 'lucide-react';
+import { useInventory } from '../context/InventoryContext';
+import { useCart } from '../context/CartContext';
 
-</head>
-<body>
-    
-    <h1 style=" color:blue;  text-align: center;" > hello  every one </h1>
-    <p style=" font-size: 20px; color : green;">Lorem ipsum dolor sit, amet consectetur adipisicing elit. Laboriosam beatae obcaecati perferendis enim voluptates suscipit laborum tempore harum vel, recusandae adipisci odio qui.</p> 
-    
-    <button style=" background-color: yellow; border-radius: 5px ;" >  Click Me </button> 
-</body>
-</html>
+const CategoryDetail = () => {
+   const { categoryId } = useParams();
+   const navigate = useNavigate();
+   const { products: allProducts } = useInventory();
+   const { addToCart } = useCart();
+   
+   const [activeFilter, setActiveFilter] = useState('All');
+   const [priceRange, setPriceRange] = useState({ min: 0, max: 50000 });
+   const [sortBy, setSortBy] = useState('featured');
+
+   // Dynamic Category Info
+   const category = useMemo(() => {
+      const baseName = categoryId?.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Power Tools';
+      
+      const descriptions = {
+         'hand-tools-edition': 'Professional grade hand tools including pliers, spanners, wrenches, and socket sets from top brands like Taparia and Deneers.',
+         'lifting-equipments-edition': 'Heavy-duty lifting and support equipment including chain blocks, magnetic lifters, and industrial hoists for safe material handling.',
+         'pneumatic-tools-edition': 'Industrial air-powered tools, blowers, and pneumatic systems designed for high-performance manufacturing and repair workflows.',
+         'all-products-edition': 'Complete catalog of all industrial power tools, hand tools, and specialized machinery in our collection.'
+      };
+
+      return {
+         id: categoryId,
+         name: baseName,
+         description: descriptions[categoryId?.toLowerCase()] || 'High-performance industrial grade tools designed for maximum efficiency and durability.'
+      };
+   }, [categoryId]);
+
+   const availableBrands = useMemo(() => {
+      const brands = new Set(allProducts.filter(p => p.category?.toLowerCase() === categoryId?.toLowerCase()).map(p => p.brand));
+      return ['All', ...Array.from(brands)].filter(Boolean);
+   }, [allProducts, categoryId]);
+
+   const products = useMemo(() => {
+      let filtered = allProducts.filter(p => p.category?.toLowerCase() === categoryId?.toLowerCase());
+      
+      if (activeFilter !== 'All') {
+         filtered = filtered.filter(p => p.brand === activeFilter);
+      }
+      
+      filtered = filtered.filter(p => p.price_inr === 0 || p.price_inr <= priceRange.max);
+
+      if (sortBy === 'price-low') filtered.sort((a, b) => a.price_inr - b.price_inr);
+      if (sortBy === 'price-high') filtered.sort((a, b) => b.price_inr - a.price_inr);
+      
+      return filtered;
+   }, [allProducts, categoryId, activeFilter, priceRange, sortBy]);
+
+   const handleAddToCart = (e, product) => {
+      e.preventDefault();
+      e.stopPropagation();
+      addToCart(product, 1);
+   };
+
+   return (
+      <div style={{ minHeight: '100vh', background: '#fff', paddingTop: '80px' }}>
+         {/* Category Hero */}
+         <div style={{ background: '#111', color: '#fff', padding: '60px 0', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 40px', position: 'relative', zIndex: 2 }}>
+               <button 
+                  onClick={() => navigate('/products')}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: '#9ca3af', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', cursor: 'pointer', marginBottom: '32px' }}
+               >
+                  <ArrowLeft size={14} /> Back to Catalog
+               </button>
+               <h4 style={{ color: '#dc2626', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '12px' }}>Industrial Collection</h4>
+               <h1 style={{ fontSize: '56px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.04em', marginBottom: '24px' }}>{category.name}</h1>
+               <p style={{ maxWidth: '600px', fontSize: '15px', color: '#9ca3af', lineHeight: 1.6, fontWeight: 500 }}>{category.description}</p>
+            </div>
+            {/* Background Texture */}
+            <div style={{ position: 'absolute', right: '-100px', top: '-100px', fontSize: '200px', fontWeight: 900, color: 'rgba(255,255,255,0.03)', pointerEvents: 'none', textTransform: 'uppercase' }}>
+               {categoryId?.charAt(0)}
+            </div>
+         </div>
+
+         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '60px 40px' }}>
+            <div style={{ display: 'flex', gap: '48px' }}>
+               {/* Sidebar Filters */}
+               <aside style={{ width: '280px', flexShrink: 0 }}>
+                  <div style={{ position: 'sticky', top: '100px' }}>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '32px' }}>
+                        <Filter size={18} />
+                        <h2 style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Filter Tools</h2>
+                     </div>
+
+                      {/* Brand Filter */}
+                     <h3 style={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#111', marginBottom: '16px' }}>Filter By Brand</h3>
+                     <select 
+                        value={activeFilter}
+                        onChange={(e) => setActiveFilter(e.target.value)}
+                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #eee', background: '#f9fafb', fontSize: '12px', fontWeight: 700, marginBottom: '40px', outline: 'none' }}
+                     >
+                        {availableBrands.map(brand => (
+                           <option key={brand} value={brand}>{brand === 'All' ? 'All Brands' : brand}</option>
+                        ))}
+                     </select>
+
+                     {/* Price Filter */}
+                     <h3 style={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#111', marginBottom: '16px' }}>Filter By Price</h3>
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <input 
+                           type="range" 
+                           min="0" 
+                           max="50000" 
+                           step="500"
+                           value={priceRange.max}
+                           onChange={(e) => setPriceRange({ ...priceRange, max: parseInt(e.target.value) })}
+                           style={{ width: '100%', accentColor: '#dc2626' }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 800, color: '#4b5563' }}>
+                           <span>₹0</span>
+                           <span>₹{priceRange.max.toLocaleString()}</span>
+                        </div>
+                     </div>
+                  </div>
+               </aside>
+
+               {/* Product Grid Area */}
+               <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', marginBottom: '40px', borderBottom: '1px solid #f0f0f0', paddingBottom: '24px' }}>
+                     <h1 style={{ fontSize: '32px', fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '-0.04em' }}>
+                        {category.name} <span style={{ color: '#dc2626' }}>Edition</span>
+                     </h1>
+                     <span style={{ fontSize: '9px', fontWeight: 900, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{products.length} Assets Found</span>
+                  </div>
+
+                  {products.length === 0 ? (
+                     <div style={{ padding: '80px 0', textAlign: 'center', background: '#f9fafb', borderRadius: '24px', border: '1px solid #f0f0f0' }}>
+                        <Wrench size={40} style={{ color: '#d1d5db', marginBottom: '16px' }} />
+                        <p style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af' }}>No assets found in this configuration.</p>
+                     </div>
+                  ) : (
+                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '32px' }}>
+                        {products.map((item, idx) => (
+                           <div 
+                              key={item.id || idx}
+                              style={{ background: '#fff', borderRadius: '16px', border: '1px solid #f0f0f0', overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', transition: 'transform 0.3s ease, box-shadow 0.3s ease' }}
+                              className="product-card-hover"
+                           >
+                              {/* Stock Badge */}
+                              {parseInt(item.stock_quantity) <= 0 && (
+                                 <div style={{ position: 'absolute', top: '16px', right: '16px', background: '#111', color: '#fff', padding: '4px 12px', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', borderRadius: '4px', zIndex: 10 }}>
+                                    Out of Stock
+                                 </div>
+                              )}
+
+                              {/* Card Header */}
+                              <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', background: '#fff', borderBottom: '1px solid #f3f4f6' }}>
+                                 <span style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', color: '#dc2626', letterSpacing: '0.05em' }}>{item.brand || 'Premium'}</span>
+                                 <span style={{ fontSize: '10px', fontWeight: 900, color: '#9ca3af', opacity: 0.7 }}>#{idx + 101}</span>
+                              </div>
+
+                              {/* Image Area */}
+                              <div 
+                                 onClick={() => navigate(`/product/${item.id}`)}
+                                 style={{ height: '240px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', cursor: 'pointer', background: '#fff' }}
+                              >
+                                 <img src={item.image} alt={item.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', transition: 'transform 0.5s ease' }} />
+                              </div>
+
+                              {/* Content Area */}
+                              <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', background: '#f9fafb' }}>
+                                 <Link to={`/product/${item.id}`} style={{ textDecoration: 'none' }}>
+                                    <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#111', textTransform: 'uppercase', marginBottom: '12px', lineHeight: 1.4, height: '42px', overflow: 'hidden' }}>{item.name}</h3>
+                                 </Link>
+                                 
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                                    <div style={{ display: 'flex', color: '#fbbf24' }}>
+                                       {[...Array(5)].map((_, i) => <Star key={i} size={10} fill="#fbbf24" />)}
+                                    </div>
+                                    <span style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af' }}>(12 Reviews)</span>
+                                 </div>
+
+                                 <div style={{ marginTop: 'auto' }}>
+                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '16px' }}>
+                                       {item.price_inr > 0 ? (
+                                          <>
+                                            <span style={{ fontSize: '24px', fontWeight: 900, color: '#111' }}>₹{item.price_inr.toLocaleString()}</span>
+                                            {item.regular_price > item.price_inr && (
+                                               <span style={{ fontSize: '12px', color: '#9ca3af', textDecoration: 'line-through' }}>₹{item.regular_price.toLocaleString()}</span>
+                                            )}
+                                          </>
+                                       ) : (
+                                          <span style={{ fontSize: '13px', fontWeight: 800, color: '#dc2626', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); navigate('/login'); }}>
+                                            Login to See Price →
+                                          </span>
+                                       )}
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                       <button 
+                                          onClick={(e) => handleAddToCart(e, item)}
+                                          disabled={parseInt(item.stock_quantity) <= 0}
+                                          style={{ flex: 1, height: '44px', background: parseInt(item.stock_quantity) <= 0 ? '#d1d5db' : '#111', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        >
+                                          Add to Cart
+                                        </button>
+                                        <button 
+                                          onClick={() => navigate(`/product/${item.id}`)}
+                                          style={{ flex: 1, height: '44px', background: '#fff', border: '1px solid #111', color: '#111', borderRadius: '8px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        >
+                                          View Details
+                                        </button>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                  )}
+               </div>
+            </div>
+         </div>
+      </div>
+   );
+};
+
+export default CategoryDetail;
