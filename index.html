@@ -1,19 +1,252 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> external css </title>
-     <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <ul class=" custom-list">
-        <li> fist item </li>
-        <li> second item </li>
-        <li> third item </li>
-    </ul>
-    <footer class="site-footer">
-        this is the  footer section
-    </footer>
-</body>
-</html>
+import React, { useState, useRef } from 'react';
+import { CheckCircle, X, Building2, CreditCard, Phone, User } from 'lucide-react';
+
+const STORAGE_KEY = 'companyProfileData';
+const inp = { width:'100%', padding:'10px 12px', border:'1px solid #e5e7eb', borderRadius:8, fontSize:13, fontWeight:600, outline:'none', boxSizing:'border-box', background:'#fff' };
+const lbl = { fontSize:'9px', fontWeight:900, textTransform:'uppercase', color:'#9ca3af', display:'block', marginBottom:6, letterSpacing:'0.05em' };
+const card = { background:'#fff', borderRadius:12, border:'1px solid #f0f0f0', boxShadow:'0 4px 12px rgba(0,0,0,0.02)', padding:24, marginBottom:20 };
+
+function fileToBase64(file) {
+  return new Promise(r => { const fr = new FileReader(); fr.onloadend = () => r(fr.result); fr.readAsDataURL(file); });
+}
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+
+export default function CompanyProfileManager() {
+  const [data, setData] = useState(() => ({
+    logo: '', companyName: 'Dushyant Power Tools',
+    contactPerson: '', designation: '',
+    gstin: '', pan: '', udyam: '',
+    bankAccount: '', ifsc: '', bankName: '', branch: '', accountHolder: '',
+    ownershipType: '', primaryBusiness: '', annualTurnover: '', ceoName: '', employees: '',
+    businessCard: { front: '', back: '' },
+    contacts: [],
+    ...loadData()
+  }));
+  const [toast, setToast] = useState(null);
+  const [activeTab, setActiveTab] = useState('profile');
+  const [newContact, setNewContact] = useState({ division:'', name:'', address:'', mobile:'', email:'' });
+  const logoRef = useRef();
+  const frontRef = useRef();
+  const backRef = useRef();
+
+  function save(updates) {
+    const updated = { ...data, ...updates };
+    setData(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    setToast('✅ Changes saved!');
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  async function handleLogo(file) {
+    if (!file) return;
+    const b64 = await fileToBase64(file);
+    save({ logo: b64 });
+  }
+
+  async function handleCard(file, side) {
+    if (!file) return;
+    const b64 = await fileToBase64(file);
+    save({ businessCard: { ...data.businessCard, [side]: b64 } });
+  }
+
+  function addContact() {
+    if (!newContact.name && !newContact.mobile) { alert('Enter name or mobile'); return; }
+    save({ contacts: [...data.contacts, { ...newContact, id: Date.now() }] });
+    setNewContact({ division:'', name:'', address:'', mobile:'', email:'' });
+  }
+
+  function removeContact(id) {
+    save({ contacts: data.contacts.filter(c => c.id !== id) });
+  }
+
+  const TABS = [
+    { id:'profile', label:'Company Profile', icon: Building2 },
+    { id:'business', label:'Business Details', icon: CreditCard },
+    { id:'bank', label:'Bank Details', icon: CreditCard },
+    { id:'contacts', label:'Contacts', icon: Phone },
+    { id:'card', label:'Business Card', icon: User },
+  ];
+
+  return (
+    <div style={{ maxWidth:900, color:'#111' }}>
+      {toast && (
+        <div style={{ position:'fixed', bottom:32, right:32, zIndex:9999, background:'#111', color:'#fff', padding:'14px 24px', borderRadius:12, boxShadow:'0 20px 40px rgba(0,0,0,0.2)', fontSize:12, fontWeight:700, borderLeft:'4px solid #22c55e', display:'flex', alignItems:'center', gap:10 }}>
+          <CheckCircle size={16} color="#22c55e" /> {toast}
+        </div>
+      )}
+
+      <div style={{ marginBottom:28 }}>
+        <h2 style={{ fontSize:22, fontWeight:900, textTransform:'uppercase', letterSpacing:'-0.04em', margin:0 }}>
+          Company <span style={{ color:'#dc2626' }}>Profile</span>
+        </h2>
+        <p style={{ fontSize:12, color:'#6b7280', fontWeight:600, marginTop:4 }}>Manage your business identity — saved locally.</p>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display:'flex', gap:4, borderBottom:'2px solid #f0f0f0', marginBottom:24 }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)}
+            style={{ padding:'10px 16px', border:'none', background:'none', cursor:'pointer', fontSize:11, fontWeight:900, color: activeTab===t.id ? '#dc2626':'#9ca3af', borderBottom: activeTab===t.id ? '2px solid #dc2626':'2px solid transparent', marginBottom:-2, whiteSpace:'nowrap' }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Profile Tab */}
+      {activeTab === 'profile' && (
+        <div style={card}>
+          <h3 style={{ fontSize:13, fontWeight:900, textTransform:'uppercase', color:'#111', marginBottom:20 }}>🏢 Company Identity</h3>
+          {/* Logo */}
+          <div style={{ display:'flex', alignItems:'center', gap:20, marginBottom:24 }}>
+            <div style={{ width:90, height:90, borderRadius:'50%', border:'2px solid #e5e7eb', overflow:'hidden', background:'#f9fafb', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}
+              onClick={() => logoRef.current.click()}>
+              {data.logo ? <img src={data.logo} alt="logo" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                : <span style={{ fontSize:30 }}>🏭</span>}
+            </div>
+            <div>
+              <button onClick={() => logoRef.current.click()} style={{ padding:'8px 16px', background:'#111', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontSize:11, fontWeight:800, marginRight:8 }}>
+                {data.logo ? 'Change Logo' : 'Upload Logo'}
+              </button>
+              {data.logo && <button onClick={() => save({ logo:'' })} style={{ padding:'8px 16px', background:'#fef2f2', color:'#dc2626', border:'none', borderRadius:8, cursor:'pointer', fontSize:11, fontWeight:800 }}>Remove</button>}
+            </div>
+            <input ref={logoRef} type="file" accept="image/*" style={{ display:'none' }} onChange={e => { handleLogo(e.target.files[0]); e.target.value=''; }} />
+          </div>
+
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            <div>
+              <label style={lbl}>Company Name</label>
+              <input style={inp} value={data.companyName} onChange={e => setData(d=>({...d, companyName:e.target.value}))} />
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div><label style={lbl}>Contact Person</label><input style={inp} value={data.contactPerson} onChange={e=>setData(d=>({...d,contactPerson:e.target.value}))} placeholder="Owner / Manager name" /></div>
+              <div><label style={lbl}>Designation</label><input style={inp} value={data.designation} onChange={e=>setData(d=>({...d,designation:e.target.value}))} placeholder="e.g. Director" /></div>
+            </div>
+          </div>
+          <button onClick={() => save({})} style={{ marginTop:20, padding:'12px 32px', background:'#dc2626', color:'#fff', border:'none', borderRadius:10, fontSize:12, fontWeight:900, cursor:'pointer' }}>Save Profile</button>
+        </div>
+      )}
+
+      {/* Business Details Tab */}
+      {activeTab === 'business' && (
+        <div style={card}>
+          <h3 style={{ fontSize:13, fontWeight:900, textTransform:'uppercase', color:'#111', marginBottom:20 }}>📋 Business Details</h3>
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div><label style={lbl}>GSTIN</label><input style={inp} value={data.gstin} onChange={e=>setData(d=>({...d,gstin:e.target.value}))} placeholder="23XXXXX" /></div>
+              <div><label style={lbl}>PAN</label><input style={inp} value={data.pan} onChange={e=>setData(d=>({...d,pan:e.target.value}))} placeholder="XXXXXX" /></div>
+            </div>
+            <div><label style={lbl}>Udyam / MSME Number</label><input style={inp} value={data.udyam} onChange={e=>setData(d=>({...d,udyam:e.target.value}))} placeholder="UDYAM-XX-XX-XXXXXXX" /></div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div><label style={lbl}>Ownership Type</label>
+                <select style={inp} value={data.ownershipType} onChange={e=>setData(d=>({...d,ownershipType:e.target.value}))}>
+                  {['','Proprietorship','Partnership','Pvt Ltd','LLP','Other'].map(o=><option key={o}>{o}</option>)}
+                </select>
+              </div>
+              <div><label style={lbl}>Annual Turnover</label>
+                <select style={inp} value={data.annualTurnover} onChange={e=>setData(d=>({...d,annualTurnover:e.target.value}))}>
+                  {['','Below 1 Cr','1-5 Cr','5-25 Cr','25-100 Cr','100+ Cr'].map(o=><option key={o}>{o}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div><label style={lbl}>CEO / Owner Name</label><input style={inp} value={data.ceoName} onChange={e=>setData(d=>({...d,ceoName:e.target.value}))} /></div>
+              <div><label style={lbl}>No. of Employees</label>
+                <select style={inp} value={data.employees} onChange={e=>setData(d=>({...d,employees:e.target.value}))}>
+                  {['','1-10','11-25','26-50','51-100','100+'].map(o=><option key={o}>{o}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+          <button onClick={() => save({})} style={{ marginTop:20, padding:'12px 32px', background:'#dc2626', color:'#fff', border:'none', borderRadius:10, fontSize:12, fontWeight:900, cursor:'pointer' }}>Save Details</button>
+        </div>
+      )}
+
+      {/* Bank Tab */}
+      {activeTab === 'bank' && (
+        <div style={card}>
+          <h3 style={{ fontSize:13, fontWeight:900, textTransform:'uppercase', color:'#111', marginBottom:20 }}>🏦 Bank Details</h3>
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div><label style={lbl}>Account Number</label><input style={inp} value={data.bankAccount} onChange={e=>setData(d=>({...d,bankAccount:e.target.value}))} /></div>
+              <div><label style={lbl}>IFSC Code</label><input style={inp} value={data.ifsc} onChange={e=>setData(d=>({...d,ifsc:e.target.value}))} /></div>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div><label style={lbl}>Bank Name</label><input style={inp} value={data.bankName} onChange={e=>setData(d=>({...d,bankName:e.target.value}))} /></div>
+              <div><label style={lbl}>Branch</label><input style={inp} value={data.branch} onChange={e=>setData(d=>({...d,branch:e.target.value}))} /></div>
+            </div>
+            <div><label style={lbl}>Account Holder Name</label><input style={inp} value={data.accountHolder} onChange={e=>setData(d=>({...d,accountHolder:e.target.value}))} /></div>
+          </div>
+          <button onClick={() => save({})} style={{ marginTop:20, padding:'12px 32px', background:'#dc2626', color:'#fff', border:'none', borderRadius:10, fontSize:12, fontWeight:900, cursor:'pointer' }}>Save Bank Details</button>
+        </div>
+      )}
+
+      {/* Contacts Tab */}
+      {activeTab === 'contacts' && (
+        <div>
+          <div style={card}>
+            <h3 style={{ fontSize:13, fontWeight:900, textTransform:'uppercase', color:'#111', marginBottom:20 }}>➕ Add Contact</h3>
+            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <div><label style={lbl}>Division</label><input style={inp} value={newContact.division} onChange={e=>setNewContact(c=>({...c,division:e.target.value}))} placeholder="e.g. Sales" /></div>
+                <div><label style={lbl}>Contact Person *</label><input style={inp} value={newContact.name} onChange={e=>setNewContact(c=>({...c,name:e.target.value}))} /></div>
+              </div>
+              <div><label style={lbl}>Address</label><input style={inp} value={newContact.address} onChange={e=>setNewContact(c=>({...c,address:e.target.value}))} /></div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <div><label style={lbl}>Mobile *</label><input style={inp} value={newContact.mobile} onChange={e=>setNewContact(c=>({...c,mobile:e.target.value}))} /></div>
+                <div><label style={lbl}>Email</label><input style={inp} value={newContact.email} onChange={e=>setNewContact(c=>({...c,email:e.target.value}))} /></div>
+              </div>
+            </div>
+            <button onClick={addContact} style={{ marginTop:16, padding:'12px 28px', background:'#dc2626', color:'#fff', border:'none', borderRadius:10, fontSize:12, fontWeight:900, cursor:'pointer' }}>Add Contact</button>
+          </div>
+
+          {data.contacts.length > 0 && (
+            <div style={card}>
+              <h3 style={{ fontSize:13, fontWeight:900, textTransform:'uppercase', color:'#111', marginBottom:16 }}>📋 Saved Contacts</h3>
+              {data.contacts.map(c => (
+                <div key={c.id} style={{ border:'1px solid #f0f0f0', borderRadius:10, padding:14, marginBottom:12, display:'flex', justifyContent:'space-between', alignItems:'start' }}>
+                  <div>
+                    <p style={{ fontWeight:900, fontSize:13, margin:'0 0 4px', color:'#111' }}>{c.name} {c.division && <span style={{ fontSize:10, color:'#9ca3af', fontWeight:700 }}>({c.division})</span>}</p>
+                    {c.address && <p style={{ fontSize:11, color:'#6b7280', margin:'0 0 2px' }}>📍 {c.address}</p>}
+                    {c.mobile && <p style={{ fontSize:11, color:'#6b7280', margin:'0 0 2px' }}>📞 {c.mobile}</p>}
+                    {c.email && <p style={{ fontSize:11, color:'#6b7280', margin:0 }}>✉️ {c.email}</p>}
+                  </div>
+                  <button onClick={() => removeContact(c.id)} style={{ background:'#fef2f2', border:'none', borderRadius:8, padding:'6px 10px', cursor:'pointer', color:'#dc2626' }}><X size={14}/></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Business Card Tab */}
+      {activeTab === 'card' && (
+        <div style={card}>
+          <h3 style={{ fontSize:13, fontWeight:900, textTransform:'uppercase', color:'#111', marginBottom:20 }}>🪪 Business Card</h3>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+            {['front','back'].map(side => (
+              <div key={side}>
+                <label style={lbl}>{side === 'front' ? 'Front' : 'Back'}</label>
+                <div onClick={() => (side === 'front' ? frontRef : backRef).current.click()}
+                  style={{ height:160, border:'2px dashed #e5e7eb', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', overflow:'hidden', background:'#f9fafb' }}>
+                  {data.businessCard[side]
+                    ? <img src={data.businessCard[side]} alt={side} style={{ width:'100%', height:'100%', objectFit:'contain' }} />
+                    : <div style={{ textAlign:'center', color:'#9ca3af' }}><div style={{ fontSize:32, marginBottom:8 }}>📷</div><div style={{ fontSize:11, fontWeight:700 }}>Click to upload {side}</div></div>}
+                </div>
+                {data.businessCard[side] && (
+                  <button onClick={() => save({ businessCard: { ...data.businessCard, [side]:'' } })}
+                    style={{ marginTop:8, width:'100%', padding:'8px', background:'#fef2f2', border:'none', borderRadius:8, cursor:'pointer', fontSize:11, fontWeight:800, color:'#dc2626' }}>Remove</button>
+                )}
+              </div>
+            ))}
+          </div>
+          <input ref={frontRef} type="file" accept="image/*" style={{ display:'none' }} onChange={e=>{handleCard(e.target.files[0],'front');e.target.value='';}} />
+          <input ref={backRef} type="file" accept="image/*" style={{ display:'none' }} onChange={e=>{handleCard(e.target.files[0],'back');e.target.value='';}} />
+        </div>
+      )}
+    </div>
+  );
+}
+
